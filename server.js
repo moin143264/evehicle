@@ -33,7 +33,12 @@ mongoose.connect(process.env.DB_URI, {
   .catch((error) => console.error('MongoDB connection error:', error));
 
 
-
+app.get("/"(req,res)=>{
+  res.status(200).send({
+    "success":true,
+    "msg":its running
+  })
+})
 // Routes
 app.use('/api', userRoutes);
 app.use('/api/stations', stationRoutes); // Keep only this route
