@@ -33,7 +33,7 @@ mongoose.connect(process.env.DB_URI, {
   .catch((error) => console.error('MongoDB connection error:', error));
 
 
-app.get("/"(req,res)=>{
+app.get("/",(req,res)=>{
   res.status(200).send({
     "success":true,
     "msg":its running
