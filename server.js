@@ -32,7 +32,6 @@ mongoose.connect(process.env.DB_URI, {
   .then(() => console.log('MongoDB connected successfully'))
   .catch((error) => console.error('MongoDB connection error:', error));
 
-
 app.get("/",(req,res)=>{
   res.status(200).send({
     "success":true,
