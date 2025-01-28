@@ -7,32 +7,45 @@ const { createError } = require('../utils/error');
 const paymentController = {
   createPaymentIntent: async (req, res, next) => {
     try {
-      console.log('Received payment intent request:', req.body);
+      console.log("Received payment intent request:", req.body);
 
-      const { amount, station, chargingPoint, chargingPointId, vehiclePlateNo,stationName } = req.body;
+      const {
+        amount,
+        station,
+        chargingPoint,
+        chargingPointId,
+        vehiclePlateNo,
+        stationName,
+      } = req.body;
 
       // Detailed validation
       const missingFields = [];
-      if (!amount) missingFields.push('amount');
-      if (!station) missingFields.push('station');
-      if (!vehiclePlateNo) missingFields.push('vehiclePlateNo');
+      if (!amount) missingFields.push("amount");
+      if (!station) missingFields.push("station");
+      if (!vehiclePlateNo) missingFields.push("vehiclePlateNo");
+
+      if (missingFields.length > 0) {
+        return next(
+          createError(400, "Missing required fields", { missingFields })
+        );
+      }
 
       // Handle both formats of charging point data
       let validatedChargingPoint;
-      if (chargingPoint && typeof chargingPoint === 'object') {
+      if (chargingPoint && typeof chargingPoint === "object") {
         validatedChargingPoint = chargingPoint;
       } else if (chargingPointId) {
         const stationData = await Station.findOne({ name: station });
         if (!stationData) {
-          return next(createError(404, 'Station not found'));
+          return next(createError(404, "Station not found"));
         }
 
         const foundChargingPoint = stationData.chargingPoints.find(
-          cp => cp.pointId === chargingPointId
+          (cp) => cp.pointId === chargingPointId
         );
 
         if (!foundChargingPoint) {
-          return next(createError(404, 'Charging point not found'));
+          return next(createError(404, "Charging point not found"));
         }
 
         validatedChargingPoint = {
@@ -40,38 +53,36 @@ const paymentController = {
           type: foundChargingPoint.type,
           power: foundChargingPoint.power,
           price: foundChargingPoint.price,
-          connectorType: foundChargingPoint.connectorType
+          connectorType: foundChargingPoint.connectorType,
         };
       } else {
-        missingFields.push('chargingPoint or chargingPointId');
-      }
-
-      if (missingFields.length > 0) {
-        return next(createError(400, 'Missing required fields', { missingFields }));
+        return next(
+          createError(400, "Missing chargingPoint or chargingPointId")
+        );
       }
 
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount),
-        currency: 'inr',
+        amount: Math.round(amount), // Ensure the amount is an integer
+        currency: "inr",
         metadata: {
-          stationName: stationName,
+          stationName,
           userId: req.user.id,
           chargingPointId: validatedChargingPoint.pointId,
-          vehiclePlateNo
-        }
+          vehiclePlateNo,
+        },
       });
 
       res.status(200).json({
         clientSecret: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
         merchantName: stationName,
-        chargingPoint: validatedChargingPoint
+        chargingPoint: validatedChargingPoint,
       });
     } catch (error) {
+      console.error("Error creating payment intent:", error);
       next(error);
     }
   },
-
   confirmPayment: async (req, res, next) => {
     try {
       const {
@@ -88,13 +99,15 @@ const paymentController = {
         longitude,
         vehiclePlateNo,
         stationName,
-        address
+        address,
       } = req.body;
 
       // Validate payment with Stripe
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (paymentIntent.status !== 'succeeded') {
-        return next(createError(400, 'Payment not successful'));
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        paymentIntentId
+      );
+      if (paymentIntent.status !== "succeeded") {
+        return next(createError(400, "Payment not successful"));
       }
 
       // Check for existing payment
@@ -102,7 +115,7 @@ const paymentController = {
       if (existingPayment) {
         return res.status(200).json({
           success: true,
-          payment: existingPayment
+          payment: existingPayment,
         });
       }
 
@@ -118,11 +131,11 @@ const paymentController = {
         duration,
         amount,
         paymentIntentId,
-        paymentStatus: 'completed',
+        paymentStatus: "completed",
         latitude,
         longitude,
         stationName,
-        address
+        address,
       });
 
       const savedPayment = await payment.save();
@@ -137,23 +150,24 @@ const paymentController = {
             duration,
             chargingPoint,
             paymentId: savedPayment._id,
-            userId: req.user.id
-          }
-        }
+            userId: req.user.id,
+          },
+        },
       });
 
       // Update user bookings
       await User.findByIdAndUpdate(req.user.id, {
         $push: {
-          bookings: savedPayment._id
-        }
+          bookings: savedPayment._id,
+        },
       });
 
       res.status(200).json({
         success: true,
-        payment: savedPayment
+        payment: savedPayment,
       });
     } catch (error) {
+      console.error("Error confirming payment:", error);
       next(error);
     }
   },
