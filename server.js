@@ -350,11 +350,12 @@ app.get('/api/bookings/all', async (req, res) => {
 });
 app.get("/api/bookings/slots", async (req, res) => {
   try {
-    const { chargingPointId, date, stationId } = req.query;
+    const { chargingPointId, date } = req.query;
 
-    if (!chargingPointId || !date || !stationId) {
+    if (!chargingPointId || !date) {
       return res.status(400).json({
-        error: "Missing required parameters: chargingPointId, date, and stationId are required",
+        error:
+          "Missing required parameters: chargingPointId and date are required",
       });
     }
 
@@ -369,13 +370,11 @@ app.get("/api/bookings/slots", async (req, res) => {
     console.log("Fetching slots:", {
       chargingPointId,
       date,
-      stationId,
       currentTime: new Date().toISOString(),
     });
 
     const bookings = await Payment.find({
       "chargingPoint.pointId": chargingPointId,
-      "chargingPoint.stationId": stationId,
       bookingDate: date,
       bookingStatus: { $in: ["confirmed", "ongoing"] },
       paymentStatus: "completed",
@@ -390,7 +389,9 @@ app.get("/api/bookings/slots", async (req, res) => {
       duration: booking.duration,
     }));
 
-    console.log(`Found ${formattedBookings.length} bookings for point ${chargingPointId} on ${date}`);
+    console.log(
+      `Found ${formattedBookings.length} bookings for point ${chargingPointId} on ${date}`
+    );
 
     res.json(formattedBookings);
   } catch (error) {
@@ -405,14 +406,13 @@ app.get("/api/bookings/slots", async (req, res) => {
 // Verify slot availability
 app.post("/api/bookings/verify", async (req, res) => {
   try {
-    const { chargingPointId, date, startTime, duration, stationId } = req.body;
+    const { chargingPointId, date, startTime, duration } = req.body;
 
     console.log("Verifying slot availability:", {
       chargingPointId,
       date,
       startTime,
       duration,
-      stationId,
     });
 
     const requestStart = convertTo24Hour(startTime);
@@ -420,8 +420,7 @@ app.post("/api/bookings/verify", async (req, res) => {
     const requestEndHour = requestStartHour + Math.ceil(duration / 60);
 
     const overlappingBookings = await Payment.find({
-      "chargingPoint.pointId": chargingPointId,
-      "chargingPoint.stationId": stationId,
+      chargingPointId,
       date,
       status: { $in: ["pending", "confirmed"] },
       paymentStatus: "success",
@@ -430,12 +429,16 @@ app.post("/api/bookings/verify", async (req, res) => {
     const isAvailable = !overlappingBookings.some((booking) => {
       const bookingStart = convertTo24Hour(booking.startTime);
       const bookingStartHour = parseInt(bookingStart.split(":")[0]);
-      const bookingEndHour = bookingStartHour + Math.ceil(booking.duration / 60);
+      const bookingEndHour =
+        bookingStartHour + Math.ceil(booking.duration / 60);
 
       return (
-        (requestStartHour >= bookingStartHour && requestStartHour < bookingEndHour) ||
-        (requestEndHour > bookingStartHour && requestEndHour <= bookingEndHour) ||
-        (requestStartHour <= bookingStartHour && requestEndHour >= bookingEndHour)
+        (requestStartHour >= bookingStartHour &&
+          requestStartHour < bookingEndHour) ||
+        (requestEndHour > bookingStartHour &&
+          requestEndHour <= bookingEndHour) ||
+        (requestStartHour <= bookingStartHour &&
+          requestEndHour >= bookingEndHour)
       );
     });
 
