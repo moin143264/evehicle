@@ -350,9 +350,9 @@ app.get('/api/bookings/all', async (req, res) => {
 });
 app.get("/api/bookings/slots", async (req, res) => {
   try {
-    const { chargingPointId, date, stationId } = req.query;
+    const { chargingPointId, date } = req.query;
 
-    if (!chargingPointId || !date || stationId) {
+    if (!chargingPointId || !date) {
       return res.status(400).json({
         error:
           "Missing required parameters: chargingPointId and date are required",
@@ -368,7 +368,6 @@ app.get("/api/bookings/slots", async (req, res) => {
     }
 
     console.log("Fetching slots:", {
-      stationId,
       chargingPointId,
       date,
       currentTime: new Date().toISOString(),
@@ -377,11 +376,10 @@ app.get("/api/bookings/slots", async (req, res) => {
     const bookings = await Payment.find({
       "chargingPoint.pointId": chargingPointId,
       bookingDate: date,
-      stationId: stationId,
       bookingStatus: { $in: ["confirmed", "ongoing"] },
       paymentStatus: "completed",
     })
-      .select("startTime endTime duration chargingPoint.pointId stationId")
+      .select("startTime endTime duration chargingPoint.pointId")
       .lean();
 
     const formattedBookings = bookings.map((booking) => ({
@@ -389,7 +387,6 @@ app.get("/api/bookings/slots", async (req, res) => {
       startTime: booking.startTime,
       endTime: booking.endTime,
       duration: booking.duration,
-      stationId: stationId,
     }));
 
     console.log(
@@ -409,14 +406,13 @@ app.get("/api/bookings/slots", async (req, res) => {
 // Verify slot availability
 app.post("/api/bookings/verify", async (req, res) => {
   try {
-    const { chargingPointId, date, startTime, duration, stationId } = req.body;
+    const { chargingPointId, date, startTime, duration } = req.body;
 
     console.log("Verifying slot availability:", {
       chargingPointId,
       date,
       startTime,
       duration,
-      stationId,
     });
 
     const requestStart = convertTo24Hour(startTime);
@@ -426,7 +422,6 @@ app.post("/api/bookings/verify", async (req, res) => {
     const overlappingBookings = await Payment.find({
       chargingPointId,
       date,
-      stationId,
       status: { $in: ["pending", "confirmed"] },
       paymentStatus: "success",
     });
@@ -453,7 +448,6 @@ app.post("/api/bookings/verify", async (req, res) => {
     res.status(500).json({ error: "Failed to verify slot availability" });
   }
 });
-
 // Create booking
 app.post('/api/bookings/create', async (req, res) => {
   try {
