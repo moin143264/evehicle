@@ -348,97 +348,109 @@ app.get('/api/bookings/all', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch bookings' });
   }
 });
-app.get('/api/bookings/slots', async (req, res) => {
+app.get("/api/bookings/slots", async (req, res) => {
   try {
-    const { chargingPointId, date } = req.query;
-    
-    if (!chargingPointId || !date) {
-      return res.status(400).json({ 
-        error: 'Missing required parameters: chargingPointId and date are required' 
+    const { chargingPointId, date, stationId } = req.query;
+
+    if (!chargingPointId || !date || stationId) {
+      return res.status(400).json({
+        error:
+          "Missing required parameters: chargingPointId and date are required",
       });
     }
 
     // Validate date format
     const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
     if (!isValidDate) {
-      return res.status(400).json({ 
-        error: 'Invalid date format. Use YYYY-MM-DD' 
+      return res.status(400).json({
+        error: "Invalid date format. Use YYYY-MM-DD",
       });
     }
 
-    console.log('Fetching slots:', {
+    console.log("Fetching slots:", {
+      stationId,
       chargingPointId,
       date,
       currentTime: new Date().toISOString(),
-      
     });
 
     const bookings = await Payment.find({
-      'chargingPoint.pointId': chargingPointId,
-      'bookingDate': date,
-      'bookingStatus': { $in: ['confirmed', 'ongoing'] },
-      'paymentStatus': 'completed'
-    }).select('startTime endTime duration chargingPoint.pointId')
-    .lean();
+      "chargingPoint.pointId": chargingPointId,
+      bookingDate: date,
+      stationId: stationId,
+      bookingStatus: { $in: ["confirmed", "ongoing"] },
+      paymentStatus: "completed",
+    })
+      .select("startTime endTime duration chargingPoint.pointId stationId")
+      .lean();
 
-    const formattedBookings = bookings.map(booking => ({
+    const formattedBookings = bookings.map((booking) => ({
       chargingPointId: booking.chargingPoint.pointId,
       startTime: booking.startTime,
       endTime: booking.endTime,
-      duration: booking.duration
+      duration: booking.duration,
+      stationId: stationId,
     }));
 
-    console.log(`Found ${formattedBookings.length} bookings for point ${chargingPointId} on ${date}`);
-    
+    console.log(
+      `Found ${formattedBookings.length} bookings for point ${chargingPointId} on ${date}`
+    );
+
     res.json(formattedBookings);
   } catch (error) {
-    console.error('Error fetching booked slots:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch booked slots',
-      message: error.message 
+    console.error("Error fetching booked slots:", error);
+    res.status(500).json({
+      error: "Failed to fetch booked slots",
+      message: error.message,
     });
   }
 });
 
 // Verify slot availability
-app.post('/api/bookings/verify', async (req, res) => {
+app.post("/api/bookings/verify", async (req, res) => {
   try {
-    const { chargingPointId, date, startTime, duration } = req.body;
+    const { chargingPointId, date, startTime, duration, stationId } = req.body;
 
-    console.log('Verifying slot availability:', {
+    console.log("Verifying slot availability:", {
       chargingPointId,
       date,
       startTime,
-      duration
+      duration,
+      stationId,
     });
 
     const requestStart = convertTo24Hour(startTime);
-    const requestStartHour = parseInt(requestStart.split(':')[0]);
+    const requestStartHour = parseInt(requestStart.split(":")[0]);
     const requestEndHour = requestStartHour + Math.ceil(duration / 60);
 
     const overlappingBookings = await Payment.find({
       chargingPointId,
       date,
-      status: { $in: ['pending', 'confirmed'] },
-      paymentStatus: 'success'
+      stationId,
+      status: { $in: ["pending", "confirmed"] },
+      paymentStatus: "success",
     });
 
-    const isAvailable = !overlappingBookings.some(booking => {
+    const isAvailable = !overlappingBookings.some((booking) => {
       const bookingStart = convertTo24Hour(booking.startTime);
-      const bookingStartHour = parseInt(bookingStart.split(':')[0]);
-      const bookingEndHour = bookingStartHour + Math.ceil(booking.duration / 60);
+      const bookingStartHour = parseInt(bookingStart.split(":")[0]);
+      const bookingEndHour =
+        bookingStartHour + Math.ceil(booking.duration / 60);
 
       return (
-        (requestStartHour >= bookingStartHour && requestStartHour < bookingEndHour) ||
-        (requestEndHour > bookingStartHour && requestEndHour <= bookingEndHour) ||
-        (requestStartHour <= bookingStartHour && requestEndHour >= bookingEndHour)
+        (requestStartHour >= bookingStartHour &&
+          requestStartHour < bookingEndHour) ||
+        (requestEndHour > bookingStartHour &&
+          requestEndHour <= bookingEndHour) ||
+        (requestStartHour <= bookingStartHour &&
+          requestEndHour >= bookingEndHour)
       );
     });
 
     res.json({ available: isAvailable });
   } catch (error) {
-    console.error('Error verifying slot availability:', error);
-    res.status(500).json({ error: 'Failed to verify slot availability' });
+    console.error("Error verifying slot availability:", error);
+    res.status(500).json({ error: "Failed to verify slot availability" });
   }
 });
 
