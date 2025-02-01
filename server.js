@@ -350,12 +350,12 @@ app.get('/api/bookings/all', async (req, res) => {
 });
 app.get("/api/bookings/slots", async (req, res) => {
   try {
-    const { chargingPointId, date } = req.query;
+    const { chargingPointId, date, stationId } = req.query;
 
-    if (!chargingPointId || !date) {
+    if (!chargingPointId || !date || !stationId) {
       return res.status(400).json({
         error:
-          "Missing required parameters: chargingPointId and date are required",
+          "Missing required parameters: chargingPointId, date, and stationId are required",
       });
     }
 
@@ -370,6 +370,7 @@ app.get("/api/bookings/slots", async (req, res) => {
     console.log("Fetching slots:", {
       chargingPointId,
       date,
+      stationId,
       currentTime: new Date().toISOString(),
     });
 
@@ -378,6 +379,7 @@ app.get("/api/bookings/slots", async (req, res) => {
       bookingDate: date,
       bookingStatus: { $in: ["confirmed", "ongoing"] },
       paymentStatus: "completed",
+      stationId: stationId, // Filter by stationId
     })
       .select("startTime endTime duration chargingPoint.pointId")
       .lean();
@@ -448,6 +450,7 @@ app.post("/api/bookings/verify", async (req, res) => {
     res.status(500).json({ error: "Failed to verify slot availability" });
   }
 });
+
 // Create booking
 app.post('/api/bookings/create', async (req, res) => {
   try {
