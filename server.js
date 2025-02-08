@@ -40,7 +40,31 @@ app.get("/",(req,res)=>{
 // Routes
 app.use('/api', userRoutes);
 app.use('/api/stations', stationRoutes); // Keep only this route
+const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
+const TOKEN_EXPIRATION_TIME = '1m'; // Set your token expiration time
 
+// Endpoint to renew the token
+app.post('/renew-token', authenticateToken, (req, res) => {
+  const user = req.user; // Get user info from the authenticated token
+
+  // Create a new token with the same user info
+  const newToken = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
+    expiresIn: TOKEN_EXPIRATION_TIME,
+  });
+
+  res.json({ token: newToken }); // Send the new token back to the client
+});
+
+// Endpoint to validate the token
+app.post('/validate-token', (req, res) => {
+  const { token } = req.body;
+  jwt.verify(token, JWT_SECRET, (err) => {
+    if (err) {
+      return res.status(403).json({ isValid: false });
+    }
+    res.json({ isValid: true });
+  });
+});
 // API endpoint to fetch user profile data
 app.get('/user-profile', authenticateToken, async (req, res) => {
   console.log('Route /user-profile accessed');  
