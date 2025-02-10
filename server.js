@@ -47,7 +47,7 @@ app.post("/renew-token", authenticateToken, (req, res) => {
   const user = req.user; // Get user info from the authenticated token
 
   // Create a new token with the same user info
-  const newToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
+  const newToken = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
     expiresIn: TOKEN_EXPIRATION_TIME,
   });
 
