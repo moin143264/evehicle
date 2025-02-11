@@ -39,6 +39,12 @@ app.get("/",(req,res)=>{
 })
 // Routes
 app.use('/api', userRoutes);
+app.post('/api/logPushToken', (req, res) => {
+  const { token } = req.body;
+  console.log('Received push token:', token);  // Or save it to your database
+  res.status(200).send({ message: 'Token logged successfully' });
+});
+
 app.use('/api/stations', stationRoutes); // Keep only this route
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 const TOKEN_EXPIRATION_TIME = '1m'; // Set your token expiration time
