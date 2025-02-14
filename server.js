@@ -38,11 +38,54 @@ app.get("/",(req,res)=>{
   })
 })
 // Routes
-app.use('/api', userRoutes);
-app.post('/api/logPushToken', (req, res) => {
-  const { token } = req.body;
-  console.log('Received push token:', token);  // Or save it to your database
-  res.status(200).send({ message: 'Token logged successfully' });
+app.use('/api', userRoutes);.const sendBookingNotifications = async () => {
+  const now = moment().utc(); // Get the current time in UTC
+  try {
+    const bookings = await Payment.find({ status: { $in: ['pending', 'confirmed'] } });
+
+    for (const booking of bookings) {
+      const user = await User.findById(booking.userId); // Get the user associated with the booking
+      if (!user || !user.pushToken) continue; // Skip if user or push token is not found
+
+      const startTime = moment(booking.startTime); // Assuming startTime is stored in the booking
+      const endTime = moment(booking.endTime); // Assuming endTime is stored in the booking
+
+      // Check if the booking is upcoming (within 10 minutes)
+      if (startTime.diff(now, 'minutes') <= 10 && booking.status === 'pending') {
+        await sendNotification(
+          user.pushToken,
+          'Upcoming Booking',
+          `Your booking at ${booking.stationName} starts in less than 10 minutes!`,
+          { bookingId: booking._id }
+        );
+      }
+      // Check if the booking has expired
+      else if (endTime.diff(now, 'minutes') <= 0 && booking.status !== 'expired') {
+        await Payment.findByIdAndUpdate(booking._id, { status: 'expired' }); // Update booking status
+        await sendNotification(
+          user.pushToken,
+          'Booking Expired',
+          `Your booking at ${booking.stationName} has ended. Thank you for using our service!`,
+          { bookingId: booking._id }
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error sending booking notifications:', error);
+  }
+};
+app.post('/api/logPushToken', async (req, res) => {
+  const { token, userId } = req.body; // Ensure you include userId
+  console.log('Received push token:', token);
+
+  try {
+    // Find the user and update their push token
+    await User.findByIdAndUpdate(userId, { pushToken: token }, { new: true });
+    res.status(200).send({ message: 'Token logged successfully' });
+  } catch (error) {
+    console.error('Error saving push token:', error);
+    res.status(500).send({ message: 'Error saving push token' });
+  }
 });
 
 app.use('/api/stations', stationRoutes); // Keep only this route
