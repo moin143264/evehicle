@@ -41,16 +41,18 @@ app.get("/",(req,res)=>{
 app.use('/api', userRoutes);
 
 const sendBookingNotifications = async () => {
-  const now = moment().utc(); // Get the current time in UTC
   try {
     const bookings = await Payment.find({ status: { $in: ['pending', 'confirmed'] } });
 
     for (const booking of bookings) {
       const user = await User.findById(booking.userId); // Get the user associated with the booking
-      if (!user || !user.pushToken) continue; // Skip if user or push token is not found
+      if (!user || !user.pushToken || !user.timezone) continue; // Skip if user, push token, or timezone is not found
 
-      const startTime = moment(booking.startTime); // Assuming startTime is stored in the booking
-      const endTime = moment(booking.endTime); // Assuming endTime is stored in the booking
+      // Get the current time in the user's local timezone
+      const now = moment.tz(user.timezone); // Use moment-timezone to get local time
+
+      const startTime = moment.tz(booking.startTime, user.timezone); // Convert start time to user's local time
+      const endTime = moment.tz(booking.endTime, user.timezone); // Convert end time to user's local time
 
       // Check if the booking is upcoming (within 10 minutes)
       if (startTime.diff(now, 'minutes') <= 10 && booking.status === 'pending') {
@@ -358,7 +360,7 @@ app.get('/ap/payments', async (req, res) => {
       });
   }
 });
-cron.schedule('* * * * *', sendBookingNotifications);
+cron.schedule('*/5 * * * *', sendBookingNotifications);
 
 // Cron job
 cron.schedule('* * * * *', async () => {
