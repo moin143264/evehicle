@@ -47,7 +47,7 @@ app.post('/api/logPushToken', (req, res) => {
 
 app.use('/api/stations', stationRoutes); // Keep only this route
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
-const TOKEN_EXPIRATION_TIME = '1m'; // Set your token expiration time
+const TOKEN_EXPIRATION_TIME = '1d'; // Changed from 1m to 1d for better usability
 
 app.post("/renew-token", authenticateToken, (req, res) => {
   const user = req.user; // Get user info from the authenticated token
@@ -69,9 +69,7 @@ app.post("/validate-token", (req, res) => {
     }
     res.json({ isValid: true });
   });
-});
-
-// API endpoint to fetch user profile data
+});// API endpoint to fetch user profile data
 app.get('/user-profile', authenticateToken, async (req, res) => {
   console.log('Route /user-profile accessed');  
   try {
