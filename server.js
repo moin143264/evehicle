@@ -38,7 +38,9 @@ app.get("/",(req,res)=>{
   })
 })
 // Routes
-app.use('/api', userRoutes);.const sendBookingNotifications = async () => {
+app.use('/api', userRoutes);
+
+const sendBookingNotifications = async () => {
   const now = moment().utc(); // Get the current time in UTC
   try {
     const bookings = await Payment.find({ status: { $in: ['pending', 'confirmed'] } });
@@ -356,6 +358,7 @@ app.get('/ap/payments', async (req, res) => {
       });
   }
 });
+cron.schedule('* * * * *', sendBookingNotifications);
 
 // Cron job
 cron.schedule('* * * * *', async () => {
