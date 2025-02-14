@@ -47,29 +47,63 @@ app.post('/api/logPushToken', (req, res) => {
 
 app.use('/api/stations', stationRoutes); // Keep only this route
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
-const TOKEN_EXPIRATION_TIME = '1d'; // Changed from 1m to 1d for better usability
+const TOKEN_EXPIRATION_TIME = '7d'; // Increase to 7 days for better user experience
 
-app.post("/renew-token", authenticateToken, (req, res) => {
-  const user = req.user; // Get user info from the authenticated token
+app.post("/renew-token", async (req, res) => {
+  // Remove authenticateToken middleware since the token is expired
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-  // Create a new token with the same user info
-  const newToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
-    expiresIn: TOKEN_EXPIRATION_TIME,
-  });
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
 
-  res.json({ token: newToken }); // Send the new token back to the client
+  try {
+    // Verify the token but ignore expiration
+    const decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+    
+    // Create new token with the same user info
+    const newToken = jwt.sign(
+      { id: decoded.id, email: decoded.email },
+      JWT_SECRET,
+      { expiresIn: TOKEN_EXPIRATION_TIME }
+    );
+
+    res.json({ token: newToken });
+  } catch (error) {
+    console.error("Token renewal error:", error);
+    res.status(403).json({ error: error.message });
+  }
 });
 
 // Endpoint to validate the token
 app.post("/validate-token", (req, res) => {
   const { token } = req.body;
-  jwt.verify(token, JWT_SECRET, (err) => {
-    if (err) {
-      return res.status(403).json({ isValid: false });
-    }
+  
+  if (!token) {
+    return res.status(400).json({ 
+      isValid: false, 
+      error: 'Token is required' 
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
     res.json({ isValid: true });
-  });
-});// API endpoint to fetch user profile data
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(403).json({ 
+        isValid: false, 
+        error: 'Token expired',
+        expired: true  // Add flag to indicate expiration
+      });
+    }
+    res.status(403).json({ 
+      isValid: false, 
+      error: error.message 
+    });
+  }
+});
 app.get('/user-profile', authenticateToken, async (req, res) => {
   console.log('Route /user-profile accessed');  
   try {
