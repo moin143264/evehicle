@@ -613,7 +613,58 @@ const convertTo24Hour = (time12) => {
   
   return `${String(hours).padStart(2, '0')}:${minutes}`;
 };
+//
+const sendNotification = async (token, message) => {
+  try {
+    let response;
 
+    if (token.startsWith('ExponentPushToken')) {
+      // Send using Expo
+      response = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: token,
+          title: message.title,
+          body: message.body,
+          data: message.data,
+        }),
+      });
+    } else {
+      // Send using FCM
+      response = await fetch('https://fcm.googleapis.com/fcm/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `key=YOUR_SERVER_KEY`, // Replace with your actual server key
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: token,
+          notification: {
+            title: message.title,
+            body: message.body,
+          },
+          data: message.data,
+        }),
+      });
+    }
+
+    const responseData = await response.json(); // Parse the response
+    if (!response.ok) {
+      console.error('Failed to send notification:', responseData);
+      return { success: false, error: responseData };
+    }
+
+    console.log('Notification sent successfully:', responseData);
+    return { success: true, data: responseData };
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    return { success: false, error: error.message };
+  }
+};
 //slot end
 // Start server
 const PORT = process.env.PORT || 5000;
