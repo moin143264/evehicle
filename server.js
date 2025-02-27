@@ -107,14 +107,13 @@ app.post('/api/push-token', (req, res) => {
 });
 // Endpoint to receive the user ID
 app.post('/api/user-id', (req, res) => {
-    const { userId } = req.body; // Destructure userId from the request body
+    const { userId } = req.body;
 
     if (!userId) {
         return res.status(400).json({ message: 'userId is required' });
     }
 
     console.log('Received user ID:', userId);
-
     // Here you can save the userId to your database or perform any other logic
 
     res.status(200).json({ message: 'User ID received successfully' });
