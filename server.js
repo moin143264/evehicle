@@ -93,17 +93,17 @@ const sendBookingNotifications = async () => {
   }
 };
 app.post('/api/push-token', (req, res) => {
-    const { token } = req.body;
+    const { token, userId } = req.body; // Destructure userId from the request body
 
-    if (!token) {
-        return res.status(400).json({ message: 'Token is required' });
+    if (!token || !userId) {
+        return res.status(400).json({ message: 'Token and userId are required' });
     }
 
-    // Here you can save the token to your database or perform any other logic
-    console.log('Received push token:', token);
+    console.log('Received push token:', token, 'for userId:', userId);
 
-    // Respond with success
-    res.status(200).json({ message: 'Token received successfully' });
+    // Here you can save the token and userId to your database or perform any other logic
+
+    res.status(200).json({ message: 'Token and userId received successfully' });
 });
 
 app.use("/api/stations", stationRoutes); // Keep only this route
