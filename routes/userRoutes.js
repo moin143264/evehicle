@@ -38,7 +38,7 @@ router.post("/send-otp", async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: `"EV Charging Office" <${process.env.EMAIL_USER}>`, // Custom sender name
     to: email,
     subject: "Registration OTP",
     text: `Your OTP for registration is: ${otp}`,
@@ -167,7 +167,7 @@ router.post("/login", async (req, res) => {
       otpStore.set(email, { otp: generatedOtp, timestamp: Date.now() });
 
       const mailOptions = {
-        from: "your-email@gmail.com",
+        from: `"EV Charging Office" <${process.env.EMAIL_USER}>`, // Custom sender name
         to: email,
         subject: "Login OTP",
         text: `Your OTP for login is: ${generatedOtp}`,
