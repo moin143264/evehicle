@@ -747,7 +747,47 @@ app.post("/api/send-email", async (req, res) => {
     });
   }
 });
+// Endpoint to send push notifications
+app.post("/send-push-notification", async (req, res) => {
+  const { email, message } = req.body;
 
+  // Fetch the user's push token from your database using the email
+  const user = await User.findOne({ email }); // Adjust based on how you fetch users
+  const pushToken = user?.pushToken; // Assume you store the push token in the user object
+
+  if (!pushToken) {
+    return res.status(400).json({ error: 'Push token not found for this user.' });
+  }
+
+  // Construct the notification payload
+  const notificationPayload = {
+    to: pushToken,
+    sound: 'default',
+    title: 'Booking Confirmation',
+    body: message,
+    data: { type: 'booking' },
+  };
+
+  try {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(notificationPayload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send notification');
+    }
+
+    return res.status(200).json({ success: true, message: 'Notification sent successfully' });
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+    return res.status(500).json({ error: 'Failed to send push notification' });
+  }
+});
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
