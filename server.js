@@ -92,18 +92,18 @@ const sendBookingNotifications = async () => {
     console.error("Error sending booking notifications:", error);
   }
 };
-app.post("/api/logPushToken", async (req, res) => {
-  const { token, userId } = req.body; // Ensure you include userId
-  console.log("Received push token:", token);
+app.post('/api/push-token', (req, res) => {
+    const { token } = req.body;
 
-  try {
-    // Find the user and update their push token
-    await User.findByIdAndUpdate(userId, { pushToken: token }, { new: true });
-    res.status(200).send({ message: "Token logged successfully" });
-  } catch (error) {
-    console.error("Error saving push token:", error);
-    res.status(500).send({ message: "Error saving push token" });
-  }
+    if (!token) {
+        return res.status(400).json({ message: 'Token is required' });
+    }
+
+    // Here you can save the token to your database or perform any other logic
+    console.log('Received push token:', token);
+
+    // Respond with success
+    res.status(200).json({ message: 'Token received successfully' });
 });
 
 app.use("/api/stations", stationRoutes); // Keep only this route
