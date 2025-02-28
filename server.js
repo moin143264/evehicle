@@ -46,52 +46,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS, // Use your app password here
   },
 });
-const sendBookingNotifications = async () => {
-  try {
-    const bookings = await Payment.find({
-      status: { $in: ["pending", "confirmed"] },
-    });
 
-    for (const booking of bookings) {
-      const user = await User.findById(booking.userId); // Get the user associated with the booking
-      if (!user || !user.pushToken || !user.timezone) continue; // Skip if user, push token, or timezone is not found
-
-      // Get the current time in the user's local timezone
-      const now = moment.tz(user.timezone); // Use moment-timezone to get local time
-
-      const startTime = moment.tz(booking.startTime, user.timezone); // Convert start time to user's local time
-      const endTime = moment.tz(booking.endTime, user.timezone); // Convert end time to user's local time
-
-      // Check if the booking is upcoming (within 10 minutes)
-      if (
-        startTime.diff(now, "minutes") <= 10 &&
-        booking.status === "pending"
-      ) {
-        await sendNotification(
-          user.pushToken,
-          "Upcoming Booking",
-          `Your booking at ${booking.stationName} starts in less than 10 minutes!`,
-          { bookingId: booking._id }
-        );
-      }
-      // Check if the booking has expired
-      else if (
-        endTime.diff(now, "minutes") <= 0 &&
-        booking.status !== "expired"
-      ) {
-        await Payment.findByIdAndUpdate(booking._id, { status: "expired" }); // Update booking status
-        await sendNotification(
-          user.pushToken,
-          "Booking Expired",
-          `Your booking at ${booking.stationName} has ended. Thank you for using our service!`,
-          { bookingId: booking._id }
-        );
-      }
-    }
-  } catch (error) {
-    console.error("Error sending booking notifications:", error);
-  }
-};
 app.post('/api/push-token', (req, res) => {
     const { token } = req.body;
 
@@ -390,74 +345,7 @@ app.get("/ap/payments", async (req, res) => {
     });
   }
 });
-cron.schedule("*/5 * * * *", sendBookingNotifications);
 
-// Cron job
-cron.schedule("* * * * *", async () => {
-  const now = moment().utc();
-  const startOfDay = moment().startOf("day").utc();
-  const endOfDay = moment().endOf("day").utc();
-
-  try {
-    const bookings = await Payment.find({
-      status: "pending",
-      selectedDate: { $gte: startOfDay.toDate(), $lte: endOfDay.toDate() },
-    });
-
-    bookings.forEach(async (booking) => {
-      const user = await User.findById(booking.userId); // Note: Changed 'user' to 'User' for model name
-      if (!user || !user.pushToken) return;
-
-      const pushToken = user.pushToken;
-      const startTime = moment(
-        `${booking.selectedDate.toISOString().split("T")[0]}T${
-          booking.startTime
-        }:00`
-      ).utc();
-      const endTime = booking.endTime
-        ? moment(
-            `${booking.selectedDate.toISOString().split("T")[0]}T${
-              booking.endTime
-            }:00`
-          ).utc()
-        : null;
-
-      // Check if the booking is arriving in 10 minutes
-      if (
-        startTime.diff(now, "minutes") <= 10 &&
-        booking.status === "pending"
-      ) {
-        console.log(`Upcoming Booking Alert for ${booking.stationName}`);
-        await Payment.findByIdAndUpdate(booking._id, { status: "arrived" });
-
-        await sendNotification(
-          pushToken,
-          "Upcoming Booking",
-          `Your booking at ${booking.stationName} starts in less than 10 minutes!`,
-          { bookingId: booking._id }
-        );
-      }
-      // Check if the booking has expired
-      else if (
-        endTime &&
-        endTime.diff(now, "minutes") <= 0 &&
-        booking.status !== "expired"
-      ) {
-        console.log(`Booking Expired Alert for ${booking.stationName}`);
-        await Payment.findByIdAndUpdate(booking._id, { status: "expired" });
-
-        await sendNotification(
-          pushToken,
-          "Booking Expired",
-          `Your booking at ${booking.stationName} has ended. Thank you for using our service!`,
-          { bookingId: booking._id }
-        );
-      }
-    });
-  } catch (error) {
-    console.error("Error processing notifications:", error);
-  }
-});
 //payment
 app.get("/payments", async (req, res) => {
   try {
@@ -662,57 +550,7 @@ const convertTo24Hour = (time12) => {
   return `${String(hours).padStart(2, "0")}:${minutes}`;
 };
 //
-const sendNotification = async (token, message) => {
-  try {
-    let response;
 
-    if (token.startsWith("ExponentPushToken")) {
-      // Send using Expo
-      response = await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: token,
-          title: message.title,
-          body: message.body,
-          data: message.data,
-        }),
-      });
-    } else {
-      // Send using FCM
-      response = await fetch("https://fcm.googleapis.com/fcm/send", {
-        method: "POST",
-        headers: {
-          Authorization: `key=YOUR_SERVER_KEY`, // Replace with your actual server key
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: token,
-          notification: {
-            title: message.title,
-            body: message.body,
-          },
-          data: message.data,
-        }),
-      });
-    }
-
-    const responseData = await response.json(); // Parse the response
-    if (!response.ok) {
-      console.error("Failed to send notification:", responseData);
-      return { success: false, error: responseData };
-    }
-
-    console.log("Notification sent successfully:", responseData);
-    return { success: true, data: responseData };
-  } catch (error) {
-    console.error("Error sending notification:", error);
-    return { success: false, error: error.message };
-  }
-};
 //slot end
 app.post("/api/send-email", async (req, res) => {
   try {
@@ -761,75 +599,7 @@ app.post("/api/send-email", async (req, res) => {
   }
 });
 // Endpoint to send push notifications
-app.post("/send-push-notification", async (req, res) => {
-  const { email, message } = req.body;
 
-  // Fetch the user's push token from your database using the email
-  const user = await User.findOne({ email }); // Adjust based on how you fetch users
-  const pushToken = user?.pushToken; // Assume you store the push token in the user object
-
-  if (!pushToken) {
-    return res.status(400).json({ error: 'Push token not found for this user.' });
-  }
-
-  // Construct the notification payload
-  const notificationPayload = {
-    to: pushToken,
-    sound: 'default',
-    title: 'Booking Confirmation',
-    body: message,
-    data: { type: 'booking' },
-  };
-
-  try {
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(notificationPayload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to send notification');
-    }
-
-    return res.status(200).json({ success: true, message: 'Notification sent successfully' });
-  } catch (error) {
-    console.error('Error sending push notification:', error);
-    return res.status(500).json({ error: 'Failed to send push notification' });
-  }
-});
-//noti
-app.post('/api/send-notification', async (req, res) => {
-  const { token, userId, message } = req.body;
-
-  if (!Expo.isExpoPushToken(token)) {
-    return res.status(400).json({ error: 'Invalid push token' });
-  }
-
-  const messages = [{
-    to: token,
-    sound: 'default',
-    body: message,
-    data: { userId: userId },
-  }];
-
-  let chunks = expo.chunkPushNotifications(messages);
-  let tickets = [];
-
-  try {
-    for (let chunk of chunks) {
-      let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-      tickets.push(...ticketChunk);
-    }
-    res.status(200).json({ success: true, tickets });
-  } catch (error) {
-    console.error("Error sending notifications:", error);
-    res.status(500).json({ error: 'Failed to send notification' });
-  }
-});
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
