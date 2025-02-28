@@ -11,7 +11,7 @@ const Payment = require("./models/Payment");
 const bookingRoutes = require("./routes/bookingRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const nodemailer = require("nodemailer");
-
+const { Expo } = require('expo-server-sdk');
 const stationRoutes = require("./routes/stationRoutes");
 const userRoutes = require("./routes/userRoutes");
 const User = require("./models/User"); // Added import for User model
@@ -801,6 +801,39 @@ app.post("/send-push-notification", async (req, res) => {
     return res.status(500).json({ error: 'Failed to send push notification' });
   }
 });
+//noti
+app.post('/send-notification', async (req, res) => {
+  const { token, message } = req.body;
+
+  // Check if the token is valid
+  if (!Expo.isExpoPushToken(token)) {
+    return res.status(400).send({ error: 'Invalid push token' });
+  }
+
+  // Create a message for the notification
+  const messages = [{
+    to: token,
+    sound: 'default',
+    body: message,
+    data: { withSome: 'data' }, // Optional data payload
+  }];
+
+  // Send notifications
+  let chunks = expo.chunkPushNotifications(messages);
+  let tickets = [];
+
+  try {
+    for (let chunk of chunks) {
+      let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+      tickets.push(...ticketChunk);
+    }
+    res.status(200).send({ success: true, tickets });
+  } catch (error) {
+    console.error("Error sending notifications:", error);
+    res.status(500).send({ error: 'Failed to send notification' });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
