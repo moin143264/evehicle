@@ -803,7 +803,7 @@ app.post("/send-push-notification", async (req, res) => {
 });
 //noti
 app.post('/send-notification', async (req, res) => {
-  const { token, message } = req.body;
+  const { token, userId, message } = req.body; // Accept userId
 
   if (!Expo.isExpoPushToken(token)) {
     return res.status(400).send({ error: 'Invalid push token' });
@@ -813,7 +813,7 @@ app.post('/send-notification', async (req, res) => {
     to: token,
     sound: 'default',
     body: message,
-    data: { withSome: 'data' },
+    data: { userId: userId }, // Optionally include userId in the data payload
   }];
 
   let chunks = expo.chunkPushNotifications(messages);
@@ -830,7 +830,6 @@ app.post('/send-notification', async (req, res) => {
     res.status(500).send({ error: 'Failed to send notification' });
   }
 });
-
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
