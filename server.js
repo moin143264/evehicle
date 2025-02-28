@@ -805,20 +805,17 @@ app.post("/send-push-notification", async (req, res) => {
 app.post('/send-notification', async (req, res) => {
   const { token, message } = req.body;
 
-  // Check if the token is valid
   if (!Expo.isExpoPushToken(token)) {
     return res.status(400).send({ error: 'Invalid push token' });
   }
 
-  // Create a message for the notification
   const messages = [{
     to: token,
     sound: 'default',
     body: message,
-    data: { withSome: 'data' }, // Optional data payload
+    data: { withSome: 'data' },
   }];
 
-  // Send notifications
   let chunks = expo.chunkPushNotifications(messages);
   let tickets = [];
 
