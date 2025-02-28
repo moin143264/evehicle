@@ -802,7 +802,7 @@ app.post("/send-push-notification", async (req, res) => {
   }
 });
 //noti
-app.post('/send-notification', async (req, res) => {
+app.post('/api/send-notification', async (req, res) => {
   const { token, userId, message } = req.body;
 
   if (!Expo.isExpoPushToken(token)) {
