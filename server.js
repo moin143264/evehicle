@@ -598,27 +598,7 @@ app.post("/api/send-email", async (req, res) => {
     });
   }
 });
-// Endpoint to send push notifications
-// Route to fetch bookings
-app.get('/api/bookings', async (req, res) => {
-  try {
-    const bookings = await Payment.find({ bookingStatus: 'confirmed' });
-    res.json(bookings);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
-// Route to mark booking as expired
-app.post('/api/mark-expired', async (req, res) => {
-  const { bookingId } = req.body;
-  try {
-    await Payment.updateOne({ bookingId }, { bookingStatus: 'cancelled' });
-    res.status(200).json({ message: 'Booking marked as expired' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
