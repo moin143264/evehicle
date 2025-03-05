@@ -598,6 +598,32 @@ app.post("/api/send-email", async (req, res) => {
     });
   }
 });
+app.post('/send-notification', async (req, res) => {
+  const { token, title, body } = req.body;
+
+  // Construct the message
+  const message = {
+    to: token,
+    sound: 'default',
+    title: title,
+    body: body,
+  };
+
+  try {
+    // Send the notification using Expo's push notification service
+    const response = await axios.post('https://exp.host/--/api/v2/push/send', message);
+    
+    // Check if the response is successful
+    if (response.status === 200) {
+      return res.status(200).send({ success: true, message: 'Notification sent successfully' });
+    } else {
+      return res.status(400).send({ success: false, message: 'Failed to send notification' });
+    }
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    return res.status(500).send({ success: false, message: 'Error sending notification' });
+  }
+});
 
 // Start server
 const PORT = process.env.PORT || 5000;
