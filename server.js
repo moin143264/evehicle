@@ -601,7 +601,6 @@ app.post("/api/send-email", async (req, res) => {
 app.post('/send-notification', async (req, res) => {
   const { token, title, body } = req.body;
 
-  // Construct the message
   const message = {
     to: token,
     sound: 'default',
@@ -610,18 +609,17 @@ app.post('/send-notification', async (req, res) => {
   };
 
   try {
-    // Send the notification using Expo's push notification service
     const response = await axios.post('https://exp.host/--/api/v2/push/send', message);
     
-    // Check if the response is successful
-    if (response.status === 200) {
-      return res.status(200).send({ success: true, message: 'Notification sent successfully' });
-    } else {
-      return res.status(400).send({ success: false, message: 'Failed to send notification' });
+    if (response.data && response.data.errors) {
+      console.error('Push notification errors:', response.data.errors);
+      return res.status(400).send({ success: false, message: 'Failed to send notification', errors: response.data.errors });
     }
+
+    return res.status(200).send({ success: true, message: 'Notification sent successfully' });
   } catch (error) {
-    console.error('Error sending notification:', error);
-    return res.status(500).send({ success: false, message: 'Error sending notification' });
+    console.error('Error sending notification:', error.response ? error.response.data : error.message);
+    return res.status(500).send({ success: false, message: 'Error sending notification', error: error.message });
   }
 });
 
