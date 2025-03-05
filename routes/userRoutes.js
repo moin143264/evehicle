@@ -281,5 +281,14 @@ router.put("/update-profile", authenticateToken, async (req, res) => {
     res.status(500).send("Server error");
   }
 });
+router.get("/user/email", authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id); // Get user data using the user ID from the token
+        if (!user) return res.status(404).send("User not found");
 
+        res.status(200).send({ email: user.email }); // Send the user's email back to the frontend
+    } catch (error) {
+        res.status(500).send("Server error");
+    }
+});
 module.exports = router;
