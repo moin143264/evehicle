@@ -257,34 +257,18 @@ router.get("/user-profile", authenticateToken, async (req, res) => {
 
 // API endpoint to update user profile data
 router.put("/update-profile", authenticateToken, async (req, res) => {
-  const { name, email, existingEmailOtp, newEmailOtp } = req.body; // Get new data and OTPs from request body
+  const { name, email } = req.body; // Get new data from request body
 
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).send("User not found");
 
-    // Step 1: Verify existing email OTP
-    const storedExistingOtp = otpStore.get(user.email);
-    if (!storedExistingOtp || storedExistingOtp.otp !== existingEmailOtp) {
-      return res.status(400).json({ error: "Invalid existing email OTP" });
-    }
-
-    // Step 2: Verify new email OTP
-    const storedNewOtp = otpStore.get(email);
-    if (!storedNewOtp || storedNewOtp.otp !== newEmailOtp) {
-      return res.status(400).json({ error: "Invalid new email OTP" });
-    }
-
-    // Step 3: Update user profile
+    // Update user profile
     user.name = name || user.name;
     user.email = email || user.email;
 
     // Save updated user data
     await user.save();
-
-    // Clear OTPs after successful verification
-    otpStore.delete(user.email); // Clear OTP for existing email
-    otpStore.delete(email); // Clear OTP for new email
 
     res.status(200).send({
       message: "Profile updated successfully",
@@ -297,5 +281,4 @@ router.put("/update-profile", authenticateToken, async (req, res) => {
     res.status(500).send("Server error");
   }
 });
-
 module.exports = router;
