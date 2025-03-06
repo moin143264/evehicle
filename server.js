@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const jwt = require("jsonwebtoken"); // Added this import
 const Stripe = require("stripe");
-const moment = require('moment-timezone');
+const moment = require('moment');
 const bodyParser = require("body-parser");
 
 const cron = require("node-cron");
@@ -643,12 +643,13 @@ app.post('/api/forgot', async (req, res) => {
         html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
     });
 
-    // Set expiration time in Asia/Kolkata timezone
-    const expiresAt = moment.tz("Asia/Kolkata").add(5, 'minutes').valueOf(); // OTP valid for 5 minutes
+    // Set expiration time for Asia/Kolkata timezone (UTC+5:30)
+    const expiresAt = moment().utcOffset('+05:30').add(5, 'minutes').valueOf(); // OTP valid for 5 minutes
     otpStore.set(email, { otp, expiresAt });
 
     console.log("Generated OTP:", otp);
-    console.log("OTP expires at (ISO):", moment.tz(expiresAt, "Asia/Kolkata").toISOString()); // Log in ISO format
+    console.log("OTP expires at (local time):", moment(expiresAt).format("YYYY-MM-DD HH:mm:ss")); // Log in local format
+    console.log("OTP expires at (ISO):", moment(expiresAt).toISOString()); // Log in ISO format
     
     res.send('OTP sent to your email');
 });
