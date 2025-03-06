@@ -676,8 +676,6 @@ app.post('/reset', async (req, res) => {
         res.status(500).send('Error updating password');
     }
 });
-
-
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
