@@ -649,8 +649,7 @@ app.post('/api/forgot', async (req, res) => {
     otpStore.set(email, { otp, expiresAt });
 
     console.log("Generated OTP:", otp);
-    console.log("OTP expires at (Asia/Kolkata):", moment.tz(expiresAt, 'Asia/Kolkata').format("YYYY-MM-DD HH:mm:ss")); // Log in Asia/Kolkata time
-    console.log("OTP expires at (ISO):", moment.tz(expiresAt, 'Asia/Kolkata').toISOString()); // Log in ISO format
+    console.log("OTP expires at (Asia/Kolkata):", moment.tz(expiresAt, 'Asia/Kolkata').format("YYYY-MM-DD HH:mm:ss")); // Log in Asia/Kolkata time only
 
     res.send('OTP sent to your email');
 });
@@ -686,7 +685,6 @@ app.post('/api/verify-otp', async (req, res) => {
     otpStore.delete(email); // Optionally remove OTP after successful verification
     res.send('OTP verified successfully');
 });
-
 
 // Reset Password
 app.post('/reset', async (req, res) => {
