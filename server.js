@@ -641,7 +641,7 @@ app.post('/api/forgot', async (req, res) => {
     });
 
     // Store OTP in the user document or in-memory store with an expiration time
-    user.otp = otp; // You may want to create an `otp` field in your User model
+    user.otp = otp; // Ensure your User model has an otp field
     user.otpExpires = Date.now() + 300000; // OTP valid for 5 minutes
     await user.save();
 
@@ -676,6 +676,7 @@ app.post('/reset', async (req, res) => {
         res.status(500).send('Error updating password');
     }
 });
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
