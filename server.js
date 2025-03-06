@@ -633,10 +633,8 @@ app.post('/api/forgot', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).send('User not found');
 
-    // Generate a random OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
 
-    // Send OTP to the user's email
     await transporter.sendMail({
         from: `"EV Charging Office" <${process.env.EMAIL_USER}>`,
         to: email,
@@ -644,7 +642,6 @@ app.post('/api/forgot', async (req, res) => {
         html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
     });
 
-    // Store OTP in the in-memory store with an expiration time
     const expiresAt = moment.tz("Asia/Kolkata").add(5, 'minutes').valueOf(); // OTP valid for 5 minutes
     otpStore.set(email, { otp, expiresAt });
 
@@ -654,37 +651,34 @@ app.post('/api/forgot', async (req, res) => {
     res.send('OTP sent to your email');
 });
 
+// Verify the OTP
 app.post('/api/verify-otp', async (req, res) => {
     const { email, otp } = req.body;
 
-    // Check if the OTP exists in the in-memory store
     const storedOtpData = otpStore.get(email);
     if (!storedOtpData) {
         console.log("OTP not found in store for email:", email);
         return res.status(400).send('OTP not found or expired');
     }
 
-    // Log the stored OTP and expiration time
     console.log("Stored OTP:", storedOtpData.otp);
     console.log("Provided OTP:", otp);
-    console.log("Current time (ISO):", moment.tz("Asia/Kolkata").toISOString());
+    const currentTime = moment.tz("Asia/Kolkata").valueOf(); // Get current time in Asia/Kolkata
+    console.log("Current time (ISO):", moment.tz(currentTime, "Asia/Kolkata").toISOString());
     console.log("OTP expires at (ISO):", moment.tz(storedOtpData.expiresAt, "Asia/Kolkata").toISOString());
 
-    // Check if the OTP is valid and not expired
     if (storedOtpData.otp !== otp) {
         console.log("OTP mismatch for email:", email);
         otpStore.delete(email); // Remove expired OTP
         return res.status(400).send('Invalid OTP');
     }
 
-    const currentTime = moment.tz("Asia/Kolkata").valueOf();
     if (storedOtpData.expiresAt < currentTime) {
         otpStore.delete(email); // Remove expired OTP
         console.log("OTP expired for email:", email);
         return res.status(400).send('OTP expired');
     }
 
-    // OTP is valid, proceed to allow password reset
     otpStore.delete(email); // Optionally remove OTP after successful verification
     res.send('OTP verified successfully');
 });
