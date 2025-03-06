@@ -4,9 +4,9 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const jwt = require("jsonwebtoken"); // Added this import
 const Stripe = require("stripe");
-const moment = require('moment');
+
 const bodyParser = require("body-parser");
-const moment-timezone = require('moment-timezone');
+const moment = require('moment-timezone');
 const cron = require("node-cron");
 const Payment = require("./models/Payment");
 const bookingRoutes = require("./routes/bookingRoutes");
