@@ -654,6 +654,7 @@ app.post('/api/forgot', async (req, res) => {
 
 
 // Verify the OTP
+
 app.post('/api/verify-otp', async (req, res) => {
     const { email, otp } = req.body;
 
@@ -666,21 +667,27 @@ app.post('/api/verify-otp', async (req, res) => {
 
     // Log the stored OTP and expiration time
     console.log("Stored OTP:", storedOtpData.otp);
+    console.log("Provided OTP:", otp);
     console.log("Current time:", Date.now());
     console.log("OTP expires at:", storedOtpData.expiresAt);
 
     // Check if the OTP is valid and not expired
-    if (storedOtpData.otp !== otp || storedOtpData.expiresAt < Date.now()) {
+    if (storedOtpData.otp !== otp) {
+        console.log("OTP mismatch for email:", email);
         otpStore.delete(email); // Remove expired OTP
-        console.log("Invalid or expired OTP for email:", email);
-        return res.status(400).send('Invalid or expired OTP');
+        return res.status(400).send('Invalid OTP');
+    }
+
+    if (storedOtpData.expiresAt < Date.now()) {
+        otpStore.delete(email); // Remove expired OTP
+        console.log("OTP expired for email:", email);
+        return res.status(400).send('OTP expired');
     }
 
     // OTP is valid, proceed to allow password reset
     otpStore.delete(email); // Optionally remove OTP after successful verification
     res.send('OTP verified successfully');
 });
-
 // Reset Password
 app.post('/reset', async (req, res) => {
     const { email, password } = req.body;
