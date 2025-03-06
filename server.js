@@ -652,6 +652,7 @@ app.post('/api/forgot', async (req, res) => {
     res.send('OTP sent to your email');
 });
 
+
 // Verify the OTP
 app.post('/api/verify-otp', async (req, res) => {
     const { email, otp } = req.body;
@@ -659,12 +660,19 @@ app.post('/api/verify-otp', async (req, res) => {
     // Check if the OTP exists in the in-memory store
     const storedOtpData = otpStore.get(email);
     if (!storedOtpData) {
+        console.log("OTP not found in store for email:", email);
         return res.status(400).send('OTP not found or expired');
     }
+
+    // Log the stored OTP and expiration time
+    console.log("Stored OTP:", storedOtpData.otp);
+    console.log("Current time:", Date.now());
+    console.log("OTP expires at:", storedOtpData.expiresAt);
 
     // Check if the OTP is valid and not expired
     if (storedOtpData.otp !== otp || storedOtpData.expiresAt < Date.now()) {
         otpStore.delete(email); // Remove expired OTP
+        console.log("Invalid or expired OTP for email:", email);
         return res.status(400).send('Invalid or expired OTP');
     }
 
