@@ -18,6 +18,7 @@ const User = require("./models/User"); // Added import for User model
 const Station = require("./models/Station");
 const Booking = require("./models/Booking"); // Ensure
 const app = express();
+const bcrypt = require('bcryptjs');
 const { authenticateToken } = require("./middleware/auth");
 const axios = require('axios'); // Ensure this line is present
 // Middleware
@@ -622,7 +623,45 @@ app.post('/send-notification', async (req, res) => {
     return res.status(500).send({ success: false, message: 'Error sending notification', error: error.message });
   }
 });
+router.post('/forgot', async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).send('User not found');
 
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // Use your app password here
+  },
+});
+
+    const url = `https://evehicle.up.railway.app/reset/${token}`;
+
+    await transporter.sendMail({
+        to: email,
+        subject: 'Password Reset',
+        html: `<a href="${url}">Reset your password</a>`,
+    });
+
+    res.send('Password reset link sent');
+});
+
+// Reset Password
+router.post('/reset/:token', async (req, res) => {
+    const { password } = req.body;
+    const { token } = req.params;
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await User.findByIdAndUpdate(decoded.id, { password: hashedPassword });
+        res.send('Password has been updated');
+    } catch (error) {
+        res.status(400).send('Invalid token');
+    }
+});
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
