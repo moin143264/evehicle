@@ -655,36 +655,32 @@ app.post('/api/forgot', async (req, res) => {
 });
 
 // Verify the OTP
-app.post('/api/verify-otp', async (req, res) => {
-    const { email, otp } = req.body;
+app.post("/api/verify-otp", (req, res) => {
+  const { email, otp } = req.body;
+  const storedData = otpStore.get(email);
 
-    const storedOtpData = otpStore.get(email);
-    if (!storedOtpData) {
-        console.log("OTP not found in store for email:", email);
-        return res.status(400).json({ error: "OTP not found or expired" });
-    }
+  if (!storedData) {
+    return res.status(400).json({ error: "OTP expired or not found" });
+  }
 
-    console.log("Stored OTP Data:", storedOtpData); // Log stored OTP data
-    console.log("Provided OTP:", otp);
-    const currentTime = moment.tz('Asia/Kolkata').valueOf(); // Get current time in Asia/Kolkata
-    console.log("Current time (Asia/Kolkata):", moment.tz(currentTime, 'Asia/Kolkata').format("YYYY-MM-DD HH:mm:ss"));
-    console.log("OTP expires at (Asia/Kolkata):", moment.tz(storedOtpData.expiresAt, 'Asia/Kolkata').format("YYYY-MM-DD HH:mm:ss"));
+  if (storedData.otp !== otp) {
+    return res.status(400).json({ error: "Invalid OTP" });
+  }
 
-    if (storedOtpData.otp !== otp) {
-        console.log("OTP mismatch for email:", email);
-        otpStore.delete(email); // Remove expired OTP
-        return res.status(400).json({ error: "Invalid OTP" });
-    }
+  if (Date.now() - storedData.timestamp > 300000) {
+    otpStore.delete(email);
+    return res.status(400).json({ error: "OTP expired" });
+  }
 
-    if (storedOtpData.expiresAt < currentTime) {
-        otpStore.delete(email); // Remove expired OTP
-        console.log("OTP expired for email:", email);
-        return res.status(400).json({ error: "OTP expired" });
-    }
-
-    otpStore.delete(email); // Optionally remove OTP after successful verification
-    res.json({ message: "OTP verified successfully" });
+  otpStore.delete(email);
+  res.status(200).json({ success: true });
 });
+
+const validateEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+};
+
 // Reset Password
 app.post('/reset', async (req, res) => {
     const { email, password } = req.body;
