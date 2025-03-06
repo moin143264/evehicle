@@ -623,7 +623,7 @@ app.post('/send-notification', async (req, res) => {
     return res.status(500).send({ success: false, message: 'Error sending notification', error: error.message });
   }
 });
-router.post('/forgot', async (req, res) => {
+app.post('/forgot', async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(404).send('User not found');
@@ -649,7 +649,7 @@ router.post('/forgot', async (req, res) => {
 });
 
 // Reset Password
-router.post('/reset/:token', async (req, res) => {
+app.post('/reset/:token', async (req, res) => {
     const { password } = req.body;
     const { token } = req.params;
 
