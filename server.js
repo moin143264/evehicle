@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken"); // Added this import
 const Stripe = require("stripe");
 const moment = require('moment');
 const bodyParser = require("body-parser");
-
+const moment-timezone = require('moment-timezone');
 const cron = require("node-cron");
 const Payment = require("./models/Payment");
 const bookingRoutes = require("./routes/bookingRoutes");
@@ -644,13 +644,14 @@ app.post('/api/forgot', async (req, res) => {
         html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
     });
 
-    // Set OTP expiration time in UTC
-    const expiresAt = moment.utc().add(5, 'minutes').valueOf(); // Current UTC time + 5 minutes
+    // Set OTP expiration time in Asia/Kolkata timezone
+    const expiresAt = moment-timezone.tz('Asia/Kolkata').add(5, 'minutes').valueOf(); // Current time in Asia/Kolkata + 5 minutes
     otpStore.set(email, { otp, expiresAt });
 
     console.log("Generated OTP:", otp);
-    console.log("OTP expires at (UTC):", moment.utc(expiresAt).format("YYYY-MM-DD HH:mm:ss")); // Log in UTC format
-    
+    console.log("OTP expires at (Asia/Kolkata):", moment-timezone.tz(expiresAt, 'Asia/Kolkata').format("YYYY-MM-DD HH:mm:ss")); // Log in Asia/Kolkata time
+    console.log("OTP expires at (ISO):", moment-timezone.tz(expiresAt, 'Asia/Kolkata').toISOString()); // Log in ISO format
+
     res.send('OTP sent to your email');
 });
 
@@ -666,9 +667,9 @@ app.post('/api/verify-otp', async (req, res) => {
 
     console.log("Stored OTP:", storedOtpData.otp);
     console.log("Provided OTP:", otp);
-    const currentTime = moment.utc().valueOf(); // Get current UTC time
-    console.log("Current time (UTC):", moment.utc(currentTime).format("YYYY-MM-DD HH:mm:ss"));
-    console.log("OTP expires at (UTC):", moment.utc(storedOtpData.expiresAt).format("YYYY-MM-DD HH:mm:ss"));
+    const currentTime = moment-timezone.tz('Asia/Kolkata').valueOf(); // Get current time in Asia/Kolkata
+    console.log("Current time (Asia/Kolkata):", moment-timezone.tz(currentTime, 'Asia/Kolkata').format("YYYY-MM-DD HH:mm:ss"));
+    console.log("OTP expires at (Asia/Kolkata):", moment-timezone.tz(storedOtpData.expiresAt, 'Asia/Kolkata').format("YYYY-MM-DD HH:mm:ss"));
 
     if (storedOtpData.otp !== otp) {
         console.log("OTP mismatch for email:", email);
@@ -685,6 +686,7 @@ app.post('/api/verify-otp', async (req, res) => {
     otpStore.delete(email); // Optionally remove OTP after successful verification
     res.send('OTP verified successfully');
 });
+
 
 // Reset Password
 app.post('/reset', async (req, res) => {
