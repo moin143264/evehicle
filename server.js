@@ -635,6 +635,7 @@ app.post('/api/forgot', async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
 
+    // Send OTP to the user's email
     await transporter.sendMail({
         from: `"EV Charging Office" <${process.env.EMAIL_USER}>`,
         to: email,
@@ -642,11 +643,12 @@ app.post('/api/forgot', async (req, res) => {
         html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
     });
 
+    // Set expiration time in Asia/Kolkata timezone
     const expiresAt = moment.tz("Asia/Kolkata").add(5, 'minutes').valueOf(); // OTP valid for 5 minutes
     otpStore.set(email, { otp, expiresAt });
 
     console.log("Generated OTP:", otp);
-    console.log("OTP expires at (ISO):", moment.tz(expiresAt, "Asia/Kolkata").toISOString());
+    console.log("OTP expires at (ISO):", moment.tz(expiresAt, "Asia/Kolkata").toISOString()); // Log in ISO format
     
     res.send('OTP sent to your email');
 });
