@@ -39,6 +39,7 @@ app.get("/", (req, res) => {
     msg: "running",
   });
 });
+const otpStore = new Map();
 // Routes
 app.use("/api", userRoutes);
 const transporter = nodemailer.createTransport({
