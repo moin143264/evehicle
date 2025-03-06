@@ -643,8 +643,8 @@ app.post('/api/forgot', async (req, res) => {
         html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
     });
 
-    // Set expiration time for Asia/Kolkata timezone (UTC+5:30)
-    const expiresAt = moment().add(5, 'minutes').utcOffset('+05:30').valueOf(); // OTP valid for 5 minutes
+    // Get the current time in Asia/Kolkata (UTC+5:30)
+    const expiresAt = moment().utcOffset('+05:30').add(5, 'minutes').valueOf(); // Current time + 5 minutes
     otpStore.set(email, { otp, expiresAt });
 
     console.log("Generated OTP:", otp);
@@ -653,7 +653,6 @@ app.post('/api/forgot', async (req, res) => {
     
     res.send('OTP sent to your email');
 });
-
 // Verify the OTP
 app.post('/api/verify-otp', async (req, res) => {
     const { email, otp } = req.body;
