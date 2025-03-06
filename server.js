@@ -623,20 +623,12 @@ app.post('/send-notification', async (req, res) => {
     return res.status(500).send({ success: false, message: 'Error sending notification', error: error.message });
   }
 });
-app.post('/forgot', async (req, res) => {
+app.post('/api/forgot', async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(404).send('User not found');
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Use your app password here
-  },
-});
-
     const url = `https://evehicle.up.railway.app/reset/${token}`;
 
     await transporter.sendMail({
