@@ -628,6 +628,7 @@ app.post('/send-notification', async (req, res) => {
 });
 // Send OTP to the user's email
   // Send OTP to the user's email
+
 app.post('/api/forgot', async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
@@ -643,16 +644,16 @@ app.post('/api/forgot', async (req, res) => {
         html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
     });
 
-    // Get the current time in Asia/Kolkata (UTC+5:30)
-    const expiresAt = moment().utcOffset('+05:30').add(5, 'minutes').valueOf(); // Current time + 5 minutes
+    // Set OTP expiration time in UTC
+    const expiresAt = moment.utc().add(5, 'minutes').valueOf(); // Current UTC time + 5 minutes
     otpStore.set(email, { otp, expiresAt });
 
     console.log("Generated OTP:", otp);
-    console.log("OTP expires at (local time):", moment(expiresAt).format("YYYY-MM-DD HH:mm:ss")); // Log in local format
-    console.log("OTP expires at (ISO):", moment(expiresAt).toISOString()); // Log in ISO format
+    console.log("OTP expires at (UTC):", moment.utc(expiresAt).format("YYYY-MM-DD HH:mm:ss")); // Log in UTC format
     
     res.send('OTP sent to your email');
 });
+
 // Verify the OTP
 app.post('/api/verify-otp', async (req, res) => {
     const { email, otp } = req.body;
@@ -665,9 +666,9 @@ app.post('/api/verify-otp', async (req, res) => {
 
     console.log("Stored OTP:", storedOtpData.otp);
     console.log("Provided OTP:", otp);
-    const currentTime = moment.tz("Asia/Kolkata").valueOf(); // Get current time in Asia/Kolkata
-    console.log("Current time (ISO):", moment.tz(currentTime, "Asia/Kolkata").toISOString());
-    console.log("OTP expires at (ISO):", moment.tz(storedOtpData.expiresAt, "Asia/Kolkata").toISOString());
+    const currentTime = moment.utc().valueOf(); // Get current UTC time
+    console.log("Current time (UTC):", moment.utc(currentTime).format("YYYY-MM-DD HH:mm:ss"));
+    console.log("OTP expires at (UTC):", moment.utc(storedOtpData.expiresAt).format("YYYY-MM-DD HH:mm:ss"));
 
     if (storedOtpData.otp !== otp) {
         console.log("OTP mismatch for email:", email);
@@ -684,6 +685,7 @@ app.post('/api/verify-otp', async (req, res) => {
     otpStore.delete(email); // Optionally remove OTP after successful verification
     res.send('OTP verified successfully');
 });
+
 // Reset Password
 app.post('/reset', async (req, res) => {
     const { email, password } = req.body;
@@ -699,7 +701,6 @@ app.post('/reset', async (req, res) => {
         res.status(500).send('Error updating password');
     }
 });
-
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
