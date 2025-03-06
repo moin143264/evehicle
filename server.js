@@ -644,7 +644,7 @@ app.post('/api/forgot', async (req, res) => {
     });
 
     // Set expiration time for Asia/Kolkata timezone (UTC+5:30)
-    const expiresAt = moment().utcOffset('+05:30').add(5, 'minutes').valueOf(); // OTP valid for 5 minutes
+    const expiresAt = moment().add(5, 'minutes').utcOffset('+05:30').valueOf(); // OTP valid for 5 minutes
     otpStore.set(email, { otp, expiresAt });
 
     console.log("Generated OTP:", otp);
