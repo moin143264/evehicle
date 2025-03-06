@@ -627,6 +627,7 @@ app.post('/send-notification', async (req, res) => {
 });
 // Send OTP to the user's email
 app.post('/api/forgot', async (req, res) => {
+    const otpStore = new Map();
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(404).send('User not found');
@@ -636,6 +637,7 @@ app.post('/api/forgot', async (req, res) => {
 
     // Send OTP to the user's email
     await transporter.sendMail({
+        from: `"EV Charging Office" <${process.env.EMAIL_USER}>`, // Custom sender name
         to: email,
         subject: 'Your OTP for Password Reset',
         html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
@@ -651,6 +653,7 @@ app.post('/api/forgot', async (req, res) => {
 
 // Verify the OTP
 app.post('/api/verify-otp', async (req, res) => {
+    const otpStore = new Map();
     const { email, otp } = req.body;
     const user = await User.findOne({ email });
 
