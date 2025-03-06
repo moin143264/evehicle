@@ -661,10 +661,10 @@ app.post('/api/verify-otp', async (req, res) => {
     const storedOtpData = otpStore.get(email);
     if (!storedOtpData) {
         console.log("OTP not found in store for email:", email);
-        return res.status(400).send('OTP not found or expired');
+        return res.status(400).json({ error: "OTP not found or expired" });
     }
 
-    console.log("Stored OTP:", storedOtpData.otp);
+    console.log("Stored OTP Data:", storedOtpData); // Log stored OTP data
     console.log("Provided OTP:", otp);
     const currentTime = moment.tz('Asia/Kolkata').valueOf(); // Get current time in Asia/Kolkata
     console.log("Current time (Asia/Kolkata):", moment.tz(currentTime, 'Asia/Kolkata').format("YYYY-MM-DD HH:mm:ss"));
@@ -673,19 +673,18 @@ app.post('/api/verify-otp', async (req, res) => {
     if (storedOtpData.otp !== otp) {
         console.log("OTP mismatch for email:", email);
         otpStore.delete(email); // Remove expired OTP
-        return res.status(400).send('Invalid OTP');
+        return res.status(400).json({ error: "Invalid OTP" });
     }
 
     if (storedOtpData.expiresAt < currentTime) {
         otpStore.delete(email); // Remove expired OTP
         console.log("OTP expired for email:", email);
-        return res.status(400).send('OTP expired');
+        return res.status(400).json({ error: "OTP expired" });
     }
 
     otpStore.delete(email); // Optionally remove OTP after successful verification
-    res.send('OTP verified successfully');
+    res.json({ message: "OTP verified successfully" });
 });
-
 // Reset Password
 app.post('/reset', async (req, res) => {
     const { email, password } = req.body;
