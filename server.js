@@ -21,6 +21,7 @@ const app = express();
 const bcrypt = require('bcryptjs');
 const { authenticateToken } = require("./middleware/auth");
 const axios = require('axios'); // Ensure this line is present
+const crypto = require('crypto'); // Add this import at the top
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -623,35 +624,56 @@ app.post('/send-notification', async (req, res) => {
     return res.status(500).send({ success: false, message: 'Error sending notification', error: error.message });
   }
 });
+// Send OTP to the user's email
 app.post('/api/forgot', async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(404).send('User not found');
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    const url = `https://evehicle.up.railway.app/reset/${token}`;
+    // Generate a random OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
 
+    // Send OTP to the user's email
     await transporter.sendMail({
         to: email,
-        subject: 'Password Reset',
-        html: `<a href="${url}">Reset your password</a>`,
+        subject: 'Your OTP for Password Reset',
+        html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
     });
 
-    res.send('Password reset link sent');
+    // Store OTP in the user document or in-memory store with an expiration time
+    user.otp = otp; // You may want to create an `otp` field in your User model
+    user.otpExpires = Date.now() + 300000; // OTP valid for 5 minutes
+    await user.save();
+
+    res.send('OTP sent to your email');
+});
+
+// Verify the OTP
+app.post('/api/verify-otp', async (req, res) => {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user || user.otp !== otp || user.otpExpires < Date.now()) {
+        return res.status(400).send('Invalid or expired OTP');
+    }
+
+    // OTP is valid, proceed to allow password reset
+    res.send('OTP verified successfully');
 });
 
 // Reset Password
-app.post('/reset/:token', async (req, res) => {
-    const { password } = req.body;
-    const { token } = req.params;
+app.post('/reset', async (req, res) => {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).send('User not found');
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const hashedPassword = await bcrypt.hash(password, 10);
-        await User.findByIdAndUpdate(decoded.id, { password: hashedPassword });
+        await User.findByIdAndUpdate(user._id, { password: hashedPassword });
         res.send('Password has been updated');
     } catch (error) {
-        res.status(400).send('Invalid token');
+        res.status(500).send('Error updating password');
     }
 });
 // Start server
