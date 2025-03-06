@@ -627,7 +627,6 @@ app.post('/send-notification', async (req, res) => {
 });
 // Send OTP to the user's email
 app.post('/api/forgot', async (req, res) => {
-    const otpStore = new Map();
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(404).send('User not found');
@@ -643,25 +642,34 @@ app.post('/api/forgot', async (req, res) => {
         html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
     });
 
-    // Store OTP in the user document or in-memory store with an expiration time
-    user.otp = otp; // Ensure your User model has an otp field
-    user.otpExpires = Date.now() + 300000; // OTP valid for 5 minutes
-    await user.save();
+    // Store OTP in the in-memory store with an expiration time
+    const expiresAt = Date.now() + 300000; // OTP valid for 5 minutes
+    otpStore.set(email, { otp, expiresAt });
 
+    console.log("Generated OTP:", otp);
+    console.log("OTP expires at:", expiresAt);
+    
     res.send('OTP sent to your email');
 });
 
 // Verify the OTP
 app.post('/api/verify-otp', async (req, res) => {
-    const otpStore = new Map();
     const { email, otp } = req.body;
-    const user = await User.findOne({ email });
 
-    if (!user || user.otp !== otp || user.otpExpires < Date.now()) {
+    // Check if the OTP exists in the in-memory store
+    const storedOtpData = otpStore.get(email);
+    if (!storedOtpData) {
+        return res.status(400).send('OTP not found or expired');
+    }
+
+    // Check if the OTP is valid and not expired
+    if (storedOtpData.otp !== otp || storedOtpData.expiresAt < Date.now()) {
+        otpStore.delete(email); // Remove expired OTP
         return res.status(400).send('Invalid or expired OTP');
     }
 
     // OTP is valid, proceed to allow password reset
+    otpStore.delete(email); // Optionally remove OTP after successful verification
     res.send('OTP verified successfully');
 });
 
@@ -680,6 +688,7 @@ app.post('/reset', async (req, res) => {
         res.status(500).send('Error updating password');
     }
 });
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
