@@ -36,6 +36,6 @@ jobs:
         with:
           project: "moin143264-evehicle-99"
           entrypoint: "node server.js"
-          root: "/"
+          root: ""
           
           
