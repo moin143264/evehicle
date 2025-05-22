@@ -35,7 +35,7 @@ jobs:
         uses: denoland/deployctl@v1
         with:
           project: "moin143264-evehicle-99"
-          entrypoint: "node server.js"
+          entrypoint: "server.js"
           root: ""
           
           
